@@ -5,7 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:кружочек"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Canvas x:Name="JopaCanvas" MouseLeftButtonUp="JopaCanvas_MouseLeftButtonUp" Background="#BF349AE2">
+        Title="MainWindow" Height="250" Width="200" LocationChanged="Window_LocationChanged">
+    <Window.Resources>
+    </Window.Resources>
+    <Canvas x:Name="JopaCanvas" MouseLeftButtonUp="JopaCanvas_MouseLeftButtonUp" Background="#BF349AE2" SizeChanged="JopaCanvas_SizeChanged" MouseRightButtonUp="JopaCanvas_MouseRightButtonUp">
     </Canvas>
 </Window>
