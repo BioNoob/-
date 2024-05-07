@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 
@@ -64,7 +65,7 @@ namespace кружочек
     {
         DoubleAnimation anim2;
         DoubleAnimation anim1;
-        bool need_ani = true;
+        public bool need_ani = true;
         public ElState(Ellipse el, Canvas par, bool need_anim = true)
         {
             _id = ++Dopnik.Id;
@@ -73,18 +74,19 @@ namespace кружочек
             Max_target.Y = par.ActualHeight;
             l.LayoutUpdated += L_LayoutUpdated;
             anim1 = new DoubleAnimation();
-            //anim1.Name = "T";
             anim2 = new DoubleAnimation();
-            //anim2.Name = "L";
-            anim1.Completed += Anim1_Completed;
-            anim2.Completed += Anim1_Completed;
             need_ani = need_anim;
+            owner = par;
+            tar = new Ellipse() { Width = 15, Height = 15 };
+            tar.Stroke = new SolidColorBrush(Colors.Black);
+            tar.Fill = this.l.Fill;
             if (need_anim)
             {
                 CalcNewPointsToMove();
             }
         }
-
+        private Canvas owner;
+        private Ellipse tar;
         //Пока с прошлой перерисовки не пройдет изменение координат на половину величины, не реагируем
         private bool resent_changed = false;
         public bool Resent_changed
@@ -103,25 +105,9 @@ namespace кружочек
         Point freeze_point = new Point();
         private void L_LayoutUpdated(object sender, EventArgs e)
         {
-            //Debug.WriteLine($"BALL {Id} TOP = {Top} LEFT = {Left}");
-            //if (!resent_changed)
-            //{
-            //    resent_changed = true;
-            //    freeze_point.X = Left;
-            //    freeze_point.Y = Top;
-            //    Drawed?.Invoke(Id, Left + l.Width / 2, Top + l.Height / 2);
-            //    //Debug.WriteLine($"BALL {Id} is FREEZE");
-            //}
-            //else
-            //{
-            //if (Resent_changed)
-            //    if (Math.Abs(freeze_point.Y - Top) > (l.Height / 2) && Math.Abs(freeze_point.X - Left) > (l.Width / 2))
-            //    {
-            //        Resent_changed = false;
-            //    }
-            //}
             if (Left == cur_target.X || Top == cur_target.Y)
             {
+                owner.Children.Remove(tar);
                 CalcNewPointsToMove();
             }
         }
@@ -140,56 +126,16 @@ namespace кружочек
         public int Id => _id;
         Point Max_target = new Point();
 
-        public delegate void ElDrawHandler(int id, double left, double top);
-        public event ElDrawHandler Drawed;
-
         private Direction_w cur_dir_w = Direction_w.None;
         private Direction_h cur_dir_h = Direction_h.None;
 
         Ellipse l { get; set; } = null;
         public Direction_w Cur_dir_w { get => cur_dir_w; set => cur_dir_w = value; }
         public Direction_h Cur_dir_h { get => cur_dir_h; set => cur_dir_h = value; }
-
-
-        //bool anim1_compl
-        //{
-        //    get => anim1_compl1;
-        //    set
-        //    {
-        //        if (anim2_compl && value)
-        //        {
-        //            CalcNewPointsToMove();
-        //        }
-        //        else
-        //            anim1_compl1 = value;
-        //    }
-        //}
-        //bool anim2_compl
-        //{
-        //    get => anim2_compl1;
-        //    set
-        //    {
-        //        if (anim1_compl && value)
-        //        {
-        //            CalcNewPointsToMove();
-        //        }
-        //        else
-        //            anim2_compl1 = value;
-        //    }
-        //}
-        //private bool anim1_compl1 = false;
-        //private bool anim2_compl1 = false;
         private Point cur_target;
 
         private void MoveTo(double time_anim)
         {
-            //string dir_y = cur_dir_h == Direction_h.Up ? "UP" : "DOWN";
-            //string dir_x = cur_dir_w == Direction_w.Right ? "RIGHT" : "LEFT";
-            //System.Diagnostics.Debug.WriteLine($"FROM {left}:{top} TO {cur_target.X}:{cur_target.Y}, DIR = {dir_x} {dir_y}");
-            //l.BeginAnimation(Canvas.LeftProperty, null);
-            //l.BeginAnimation(Canvas.TopProperty, anim1);
-            //anim1 = new DoubleAnimation(top, cur_target.Y, TimeSpan.FromSeconds(time_anim));
-            //anim2 = new DoubleAnimation(left, cur_target.X, TimeSpan.FromSeconds(time_anim));
             anim1.From = Top;
             anim1.To = cur_target.Y;
             anim1.Duration = TimeSpan.FromSeconds(time_anim);
@@ -202,25 +148,10 @@ namespace кружочек
             l.BeginAnimation(Canvas.LeftProperty, anim2);///, HandoffBehavior.SnapshotAndReplace);
             l.BeginAnimation(Canvas.TopProperty, anim1);//, HandoffBehavior.SnapshotAndReplace);
         }
-        //int anim_cmpl = 0;
-        private void Anim1_Completed(object sender, EventArgs e)
-        {
-            //anim_cmpl++;
-            //if (anim_cmpl == 2)
-            //{
-            //    anim_cmpl = 0;
-            //    CalcNewPointsToMove();
-            //    Debug.WriteLine("END");
-            //}
-            //throw new NotImplementedException();
-        }
-
-        private void GetNewDirection(Direction_h dop_h = Direction_h.None, Direction_w dop_w = Direction_w.None)
+        private void GetNewDirection(Direction_h dop_h = Direction_h.None, Direction_w dop_w = Direction_w.None, ElState Stat_obj = null)
         {
             if (dop_h != Direction_h.None && dop_w != Direction_w.None)
             {
-                //Resent_changed = true;
-                //if (another.Resent_changed) continue;
                 switch (cur_dir_h)
                 {
                     case Direction_h.Up:
@@ -321,7 +252,7 @@ namespace кружочек
                                     if (dop_w == Direction_w.Left)
                                     {
                                         //dop_w = Direction_w.Right;
-                                        cur_dir_w = Direction_w.Left;
+                                        cur_dir_h = Direction_h.Up;
                                     }
                                     else if (dop_w == Direction_w.Right)
                                     {
@@ -334,12 +265,14 @@ namespace кружочек
                                     if (dop_w == Direction_w.Left)
                                     {
                                         //dop_w = Direction_w.Right;
-                                        cur_dir_w = Direction_w.Left;
+                                        //cur_dir_w = Direction_w.Left;
+                                        cur_dir_h = Direction_h.Up;
                                     }
                                     else if (dop_w == Direction_w.Right)
                                     {
                                         //dop_h = Direction_h.Up;
-                                        cur_dir_w = Direction_w.Left;
+                                        //cur_dir_w = Direction_w.Left;
+                                        cur_dir_h = Direction_h.Up;
                                     }
                                 }
                                 break;
@@ -349,37 +282,72 @@ namespace кружочек
             }
             else
             {
-                if (cur_dir_w == Direction_w.None)
-                    cur_dir_w = (Direction_w)Dopnik.r_path.Next(0, 1);
-                else
+                if(Stat_obj != null)
+                {
+                    //ну почти, надо еще знать с какой стороны заход на шар. интересная тема. может пригодится
+                    //подумать что придумать
                     switch (cur_dir_w)
                     {
                         case Direction_w.Left:
-                            if (cur_target.X <= l.Width) //уперлись в границу слева
-                                cur_dir_w = Direction_w.Right;
+                            switch (cur_dir_h)
+                            {
+                                case Direction_h.Up:
+                                    break;
+                                case Direction_h.Down:
+                                    cur_dir_w = Direction_w.Right;
+                                    break;
+                            }
                             break;
                         case Direction_w.Right:
-                            if (cur_target.X >= Max_target.X - l.Width) //уперлись в границу справа
-                                cur_dir_w = Direction_w.Left;
+                            switch (cur_dir_h)
+                            {
+                                case Direction_h.Up:
+                                    cur_dir_h = Direction_h.Down;
+                                    break;
+                                case Direction_h.Down:
+                                    cur_dir_w = Direction_w.Left;
+                                    break;
+                            }
                             break;
                     }
-                if (cur_dir_h == Direction_h.None)
-                    cur_dir_h = (Direction_h)Dopnik.r_path.Next(0, 1);
+                }
                 else
-                    switch (cur_dir_h)
-                    {
-                        case Direction_h.Up:
-                            if (cur_target.Y <= l.Height) //уперлись в границу сверху
-                                cur_dir_h = Direction_h.Down;
-                            break;
-                        case Direction_h.Down:
-                            if (cur_target.Y >= Max_target.Y - l.Height) //уперлись в границу снизу
-                                cur_dir_h = Direction_h.Up;
-                            break;
-                    }
+                {
+                    if (cur_dir_w == Direction_w.None)
+                        cur_dir_w = (Direction_w)Dopnik.r_path.Next(0, 1);
+                    else
+                        switch (cur_dir_w)
+                        {
+                            case Direction_w.Left:
+                                if (cur_target.X <= l.Width) //уперлись в границу слева
+                                    cur_dir_w = Direction_w.Right;
+                                break;
+                            case Direction_w.Right:
+                                if (cur_target.X >= Max_target.X - l.Width) //уперлись в границу справа
+                                    cur_dir_w = Direction_w.Left;
+                                break;
+                        }
+                    if (cur_dir_h == Direction_h.None)
+                        cur_dir_h = (Direction_h)Dopnik.r_path.Next(0, 1);
+                    else
+                        switch (cur_dir_h)
+                        {
+                            case Direction_h.Up:
+                                if (cur_target.Y <= l.Height) //уперлись в границу сверху
+                                    cur_dir_h = Direction_h.Down;
+                                break;
+                            case Direction_h.Down:
+                                if (cur_target.Y >= Max_target.Y - l.Height) //уперлись в границу снизу
+                                    cur_dir_h = Direction_h.Up;
+                                break;
+                        }
+                }
+                //тут можно поменять для стационарного объекта, что он типо стена
+
             }
         }
-        public void CalcNewPointsToMove(Direction_h dop_h = Direction_h.None, Direction_w dop_w = Direction_w.None)
+        double curr_angle = 0.0;
+        public void CalcNewPointsToMove(Direction_h dop_h = Direction_h.None, Direction_w dop_w = Direction_w.None, ElState Stat_obj = null)
         {
             if (!need_ani) return;
 
@@ -391,9 +359,6 @@ namespace кружочек
             //4. когда доехали до точки - ширина высота круга (30) расщитываем новую точку движения в противоположенную
 
             //МЕНЯЕМ НАПРАВЛЕНИЕ ЕСЛИ УПЕРЛИСЬ В ГРАНИЦУ
-
-            //var top = Canvas.GetTop(l);
-            //var left = Canvas.GetLeft(l);
             GetNewDirection(dop_h, dop_w);
             //ЕСЛИ ВНИЗ ИЛИ ВПРАВО, уменьшим границы МАКС на величину шара
             Point _Max_target = new Point(Max_target.X, Max_target.Y);
@@ -414,6 +379,16 @@ namespace кружочек
                 kat = _Max_target.X - Left; //+ l.Width / 2;
                 cur_target.X = _Max_target.X;
             }
+
+            if (dop_h == Direction_h.None || dop_w == Direction_w.None)
+            {
+                curr_angle = Dopnik.r_path.Next(0, 89) + (Dopnik.r_path.Next(0, 99) / 100.0);
+            }
+            else
+            {
+                //int pause = 0;
+                owner.Children.Remove(tar);
+            }
             if (cur_dir_h == Direction_h.Up)
                 max_angle = Math.Atan(Top / kat) / Math.PI * 180;
             else
@@ -421,9 +396,10 @@ namespace кружочек
 
             if (max_angle < 0) max_angle = 0;
 
-            double alfa = Dopnik.r_path.Next(0, 89) + (Dopnik.r_path.Next(0, 99) / 100.0); //рандомим угол
-            double tar_kat = kat * Math.Tan(alfa * Math.PI / 180);
-            if (alfa < max_angle)
+
+            // double alfa = Dopnik.r_path.Next(0, 89) + (Dopnik.r_path.Next(0, 99) / 100.0); //рандомим угол
+            double tar_kat = kat * Math.Tan(curr_angle * Math.PI / 180);
+            if (curr_angle < max_angle)
             {
                 //первый спопсоб для простого
 
@@ -449,12 +425,12 @@ namespace кружочек
                 //              если вниз, макс
                 if (cur_dir_h == Direction_h.Up)
                 {
-                    tar_kat = (tar_kat - Top) / Math.Tan(alfa * Math.PI / 180);
+                    tar_kat = (tar_kat - Top) / Math.Tan(curr_angle * Math.PI / 180);
                     cur_target.Y = 0;
                 }
                 else
                 {
-                    tar_kat = Math.Abs(Top + tar_kat - _Max_target.Y) / Math.Tan(alfa * Math.PI / 180);
+                    tar_kat = Math.Abs(Top + tar_kat - _Max_target.Y) / Math.Tan(curr_angle * Math.PI / 180);
                     cur_target.Y = _Max_target.Y;
                 }
                 if (cur_dir_w == Direction_w.Left)
@@ -468,6 +444,10 @@ namespace кружочек
             }
 
             double path = Math.Sqrt(Math.Pow(Left + l.Width / 2 - cur_target.X, 2) + Math.Pow(Top + l.Height / 2 - cur_target.Y, 2));
+
+            Canvas.SetLeft(tar, cur_target.X);
+            Canvas.SetTop(tar, cur_target.Y);
+            owner.Children.Add(tar);
             double speed = 300;
             double time = path / speed;
 

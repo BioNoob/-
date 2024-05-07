@@ -32,29 +32,69 @@ namespace кружочек
         }
         //int frames = 0;
         //List<ElState> el_to_changed = new List<ElState>();
-        List<List<ElState>> pares = new List<List<ElState>>();
+        List<KeyValuePair<int, int>> pares = new List<KeyValuePair<int, int>>();
+        List<KeyValuePair<int, int>> to_del = new List<KeyValuePair<int, int>>();
         private void MainWindow_LayoutUpdated(object sender, EventArgs e)
         {
-            //если не удалилсь друг от друга на расстояние больше в 1px то не учитывать их
-            //а для этого нужно определить пары
-            foreach (var item in lst.Where(t => !t.Resent_changed))
+            /*
+Сделать историю 
+Кто с кем сталкивался (два айди)
+Смотреть, внутри фрейма, если их позиция "отлипла" на величину больше поисковой
+То удалять из истории
+             */
+            foreach (var el1 in lst)
             {
-                var a = lst.Where(t => t.Id != item.Id && !t.Resent_changed).Where(t => Math.Abs(t.Center.X - item.Center.X) < 16 && Math.Abs(t.Center.Y - item.Center.Y) < 16);
-                if (a.Any())
+                foreach (var el2 in lst.Where(t => t.Id != el1.Id))
                 {
-                    var xx = new List<ElState>();
-                    var z = a.First();
-                    xx.Add(item);
-                    xx.Add(z);
-                    pares.Add(xx);
-                    Direction_w buf_w = z.Cur_dir_w;
-                    Direction_h buf_h = z.Cur_dir_h;
-                    z.CalcNewPointsToMove(item.Cur_dir_h, item.Cur_dir_w);
-                    item.CalcNewPointsToMove(buf_h, buf_w);
-                    z.Resent_changed = true;
-                    item.Resent_changed = true;
+                    if (pares.Contains(new KeyValuePair<int, int>(el1.Id, el2.Id)) || pares.Contains(new KeyValuePair<int, int>(el2.Id, el1.Id)))
+                    {
+                        continue;
+                    }
+                    Rect r1 = new Rect(el1.Left, el1.Top, el1.Width+2, el1.Height+2);
+                    Rect r2 = new Rect(el2.Left, el2.Top, el2.Width+2, el2.Height+2);
+                    if (r1.IntersectsWith(r2))
+                    {
+                        pares.Add(new KeyValuePair<int, int>(el1.Id, el2.Id));
+                        Direction_w buf_w = el2.Cur_dir_w;
+                        Direction_h buf_h = el2.Cur_dir_h;
+                        el2.CalcNewPointsToMove(el1.Cur_dir_h, el1.Cur_dir_w, el1.need_ani ? null: el1);
+                        el1.CalcNewPointsToMove(buf_h, buf_w, el2.need_ani ? null : el2);
+                    }
                 }
             }
+            to_del.Clear();
+            foreach (var item in pares)
+            {
+                var el1 = lst.Single(t => t.Id == item.Key);
+                var el2 = lst.Single(t => t.Id == item.Value);
+                Rect r1 = new Rect(el1.Left, el1.Top, el1.Width+2, el1.Height+2);
+                Rect r2 = new Rect(el2.Left, el2.Top, el2.Width+2, el2.Height+2);
+                if (!r1.IntersectsWith(r2))
+                {
+                    to_del.Add(item);
+                }
+            }
+            to_del.ForEach(t => pares.Remove(t));
+
+
+            //foreach (var item in lst.Where(t => !t.Resent_changed))
+            //{
+            //    var a = lst.Where(t => t.Id != item.Id && !t.Resent_changed).Where(t => Math.Abs(t.Center.X - item.Center.X) < 16 && Math.Abs(t.Center.Y - item.Center.Y) < 16);
+            //    if (a.Any())
+            //    {
+            //        var xx = new List<ElState>();
+            //        var z = a.First();
+            //        xx.Add(item);
+            //        xx.Add(z);
+            //        pares.Add(xx);
+            //        Direction_w buf_w = z.Cur_dir_w;
+            //        Direction_h buf_h = z.Cur_dir_h;
+            //        z.CalcNewPointsToMove(item.Cur_dir_h, item.Cur_dir_w);
+            //        item.CalcNewPointsToMove(buf_h, buf_w);
+            //        z.Resent_changed = true;
+            //        item.Resent_changed = true;
+            //    }
+            //}
 
         }
 
@@ -69,7 +109,7 @@ namespace кружочек
             Canvas.SetTop(l, pos.Y - l.Height / 2);
             JopaCanvas.Children.Add(l);
             var x = new ElState(l, JopaCanvas);
-            x.Drawed += X_Drawed;
+            //x.Drawed += X_Drawed;
             lst.Add(x);
 
         }
@@ -84,8 +124,8 @@ namespace кружочек
             Canvas.SetTop(l, pos.Y - l.Height / 2);
             JopaCanvas.Children.Add(l);
             var x = new ElState(l, JopaCanvas, false);
-            x.Cur_dir_h = Direction_h.Up;
-            x.Cur_dir_w = Direction_w.Left;
+            x.Cur_dir_h = Direction_h.None;
+            x.Cur_dir_w = Direction_w.None;
             lst.Add(x);
         }
         private void X_Drawed(int id, double left, double top)
