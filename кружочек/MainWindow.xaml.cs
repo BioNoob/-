@@ -50,15 +50,15 @@ namespace кружочек
                     {
                         continue;
                     }
-                    Rect r1 = new Rect(el1.Left, el1.Top, el1.Width+2, el1.Height+2);
-                    Rect r2 = new Rect(el2.Left, el2.Top, el2.Width+2, el2.Height+2);
+                    Rect r1 = new Rect(el1.Left, el1.Top, el1.Width + 2, el1.Height + 2);
+                    Rect r2 = new Rect(el2.Left, el2.Top, el2.Width + 2, el2.Height + 2);
                     if (r1.IntersectsWith(r2))
                     {
                         pares.Add(new KeyValuePair<int, int>(el1.Id, el2.Id));
-                        Direction_w buf_w = el2.Cur_dir_w;
-                        Direction_h buf_h = el2.Cur_dir_h;
-                        el2.CalcNewPointsToMove(el1.Cur_dir_h, el1.Cur_dir_w, el1.need_ani ? null: el1);
-                        el1.CalcNewPointsToMove(buf_h, buf_w, el2.need_ani ? null : el2);
+                        //Direction_w buf_w = el2.Cur_dir_w;
+                        //Direction_h buf_h = el2.Cur_dir_h;
+                        el2.CalcNewPointsToMove(el1);//, el1.Cur_dir_h, el1.Cur_dir_w);
+                        el1.CalcNewPointsToMove(el2);//, buf_h, buf_w);
                     }
                 }
             }
@@ -67,8 +67,8 @@ namespace кружочек
             {
                 var el1 = lst.Single(t => t.Id == item.Key);
                 var el2 = lst.Single(t => t.Id == item.Value);
-                Rect r1 = new Rect(el1.Left, el1.Top, el1.Width+2, el1.Height+2);
-                Rect r2 = new Rect(el2.Left, el2.Top, el2.Width+2, el2.Height+2);
+                Rect r1 = new Rect(el1.Left, el1.Top, el1.Width + 2, el1.Height + 2);
+                Rect r2 = new Rect(el2.Left, el2.Top, el2.Width + 2, el2.Height + 2);
                 if (!r1.IntersectsWith(r2))
                 {
                     to_del.Add(item);
@@ -152,7 +152,7 @@ namespace кружочек
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            lst.Last().CalcNewPointsToMove();
+            lst.ForEach(t => t.MoveTo(t.time_));
         }
 
 

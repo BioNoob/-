@@ -9,5 +9,6 @@
     <Window.Resources>
     </Window.Resources>
     <Canvas x:Name="JopaCanvas" MouseLeftButtonUp="JopaCanvas_MouseLeftButtonUp" Background="#BF349AE2" SizeChanged="JopaCanvas_SizeChanged" MouseRightButtonUp="JopaCanvas_MouseRightButtonUp">
+        <Button Width="20" Height="20" Click="Button_Click"/>
     </Canvas>
 </Window>
