@@ -55,9 +55,8 @@ namespace кружочек
                     if (r1.IntersectsWith(r2))
                     {
                         pares.Add(new KeyValuePair<int, int>(el1.Id, el2.Id));
-                        //Direction_w buf_w = el2.Cur_dir_w;
-                        //Direction_h buf_h = el2.Cur_dir_h;
                         el2.CalcNewPointsToMove(el1);//, el1.Cur_dir_h, el1.Cur_dir_w);
+                        el2.Use_old_coord = true;
                         el1.CalcNewPointsToMove(el2);//, buf_h, buf_w);
                     }
                 }

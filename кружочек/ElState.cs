@@ -21,10 +21,36 @@ namespace кружочек
         Down,
         None
     }
+    public class Point
+    {
+        public double X { get; set; }
+        public double Y { get; set; }
+        public Point(Point p)
+        {
+            X = p.X;
+            Y = p.Y;
+        }
+        public Point(double x, double y)
+        {
+            X = x;
+            Y = y;
+        }
+        public Point()
+        {
+            X = 0;
+            Y = 0;
+        }
+        public override string ToString()
+        {
+            return $"{X}:{Y}";
+        }
+    }
     public static class Dopnik
     {
         public static int Id;
         public static Random r_path = new Random((int)DateTime.Now.Ticks);
+        const double EPS = 1e-9;
+        public static Point MaxTarget { get; set; } = new Point();
 
         private static Point GetVector(Point cur1, Point tar1)
         {
@@ -38,27 +64,6 @@ namespace кружочек
         {
             return Math.Sqrt(Math.Pow(vec.X, 2) + Math.Pow(vec.Y, 2));
         }
-        public static double GetAngle(Point cur, Point tar)
-        {
-            double scal = Scal_mult_of_vec(cur, tar);
-            double mod1 = Module_of_vec(cur);
-            double mod2 = Module_of_vec(tar);
-            var x = scal / (mod1 * mod2);
-            if (Double.IsNaN(x))
-                x = 0;
-            if (x > 1d)
-                x = 0.99;
-            else if (x < -1d)
-                x = -0.99;
-            return Math.Acos(x) / Math.PI * 180;
-
-            //// Получим косинус угла по формуле
-            //double cos = (cur.X * tar.X + cur.Y * tar.Y)
-            //        / (Math.Sqrt(Math.Pow(cur.X, 2) + Math.Pow(cur.Y, 2))
-            //        * Math.Sqrt(Math.Pow(tar.X, 2) + Math.Pow(tar.Y, 2)));
-            //// Вернем arccos полученного значения (в радианах!)
-            //return Math.Acos(cos) * 180 / Math.PI;
-        }
         public static double UngleOfVectors(Point cur1, Point tar1, Point cur2, Point tar2)
         {
             Point vec1 = GetVector(cur1, tar1);
@@ -67,7 +72,7 @@ namespace кружочек
             double mod1 = Module_of_vec(vec1);
             double mod2 = Module_of_vec(vec2);
             var x = scal / (mod1 * mod2);
-            if (Double.IsNaN(x))
+            if (double.IsNaN(x))
                 x = 0;
             if (x > 1d)
                 x = 0.99;
@@ -76,48 +81,206 @@ namespace кружочек
             return Math.Acos(x) / Math.PI * 180;
 
         }
+        //получаем уравнение прямой
+        public static void GetCanon(Point start, Point end, out double k, out double b)
+        {
+            /* x-xa / xb-xa = y - ya / yb - ya*/
+            double ax = end.X - start.X;
+            double ay = end.Y - start.Y;
+            k = ay / ax;
+            b = -1 * (((ay * start.X) - (start.Y * ax)) / ax);
+        }
 
-        private static double vector_mult(double ax, double ay, double bx, double by) //векторное произведение
+        static double det(double a, double b, double c, double d)
         {
-            return ax * by - bx * ay;
+            return a * d - b * c;
         }
-        static void LineEquation(Point p1, Point p2, out double A, out double B, out double C)
+        //точка пересечения двух прямых заданных уравнением
+        //можно использовать для нахождения пересечения, а не через метод прямоугольников
+        public static bool intersect(double k1, double b1, double k2, double b2, out Point res)
         {
-            A = p2.Y - p1.Y;
-            B = p1.X - p2.X;
-            C = -p1.X * (p2.Y - p1.Y) + p1.Y * (p2.X - p1.X);
-        }
-        public static bool areCrossing(Point p1, Point p2, Point p3, Point p4)//проверка пересечения
-        {
-            double v1 = vector_mult(p4.X - p3.X, p4.Y - p3.Y, p1.X - p3.X, p1.Y - p3.Y);
-            double v2 = vector_mult(p4.X - p3.X, p4.Y - p3.Y, p2.X - p3.X, p2.Y - p3.Y);
-            double v3 = vector_mult(p2.X - p1.X, p2.Y - p1.Y, p3.X - p1.X, p3.Y - p1.Y);
-            double v4 = vector_mult(p2.X - p1.X, p2.Y - p1.Y, p4.X - p1.X, p4.Y - p1.Y);
-            if ((v1 * v2) < 0 && (v3 * v4) < 0)
+            double bb1 = -1 * b1;
+            double bb2 = -1 * b2;
+            double zn = det(k1, 1, k2, 1);
+            if (Math.Abs(zn) < EPS)
             {
-                double a1, b1, c1, a2, b2, c2;
-                LineEquation(p1, p2, out a1, out b1, out c1);
-                LineEquation(p3, p4, out a2, out b2, out c2);
-                Point p = CrossingPoint(a1, b1, c1, a2, b2, c2);
+                res = null;
+                return false;
             }
-            return false;
+            res = new Point();
+            res.X = -det(b1, 1, b2, 1) / zn;
+            res.Y = -det(k1, bb1, k2, bb2) / zn;
+            return true;
         }
-        static Point CrossingPoint(double a1, double b1, double c1, double a2, double b2, double c2)
+
+        
+        //может чтоб было проще, ввести класс вектора, где сразу будт считаться вектора по точкам.. (ну или даже прямой, чтоб еше коэфы к и б хранить, да и длину)
+        public static Point GetOrtoector(double angle_from, Point st1, Point end1, Point st2, Point end2)
         {
-            Point pt = new Point();
-            double d = (double)(a1 * b2 - b1 * a2);
-            double dx = (double)(-c1 * b2 + b1 * c2);
-            double dy = (double)(-a1 * c2 + c1 * a2);
-            pt.X = (int)(dx / d);
-            pt.Y = (int)(dy / d);
-            return pt;
+            /*
+             * 1. получили уравнение прямой GetCanon
+             * 2. получили уравнение прямой GetCanon
+             * 3. нашли точку пересечения intersect
+             * 4. строим прямую от точки пересчения к границе (как обычный вектор) (в нужном направлении...) ага.. и под нужным углом
+             * 5. ищем угол между прямой 1. и 4. угол + угол = новый угол движения для шарика после отражения
+             * 6. ищем угол между прямой 2. и 4. = новый угол движения для шарика после отражения, но с учетом того, что одно из двух направлений будет занято первым шаром (5.)
+             * 7. строим две прямые новые для движения
+             */
+            //КСТА k=tg(alfa)
+            //если k > 0 то вверх едем
+            //если k < 0 то вниз
+            //alfa = atan(k);
+            //знач направление определим тоже по точкам, но вручную сравнением
+            //1
+            GetCanon(st1, end1, out double k1, out double b1);
+            //2
+            GetCanon(st2, end2, out double k2, out double b2);
+            //3
+            Point answ = new Point();
+            if (intersect(k1, b1, k2, b2, out answ))
+            {
+                //пересечение
+                //Будем искать точки пересечения 
+                //y=kx+b знаем y с точки, знаем х с точки, знаем К через тангенс
+                //-b=-y+kx
+                //b=y-kx
+                Point crossLef = new Point();
+                Point crossTop = new Point();
+                Point crossRig = new Point();
+                Point crossBot = new Point();
+                double _nk = Math.Tan((90 - angle_from) * Math.PI / 180);
+                double _nb = answ.Y - _nk * answ.X;
+                //получим две точки пересчения минимум. Выяснить какие (можно через провреку по К но лень)
+                intersect(_nk, _nb, kLeft, bLeft, out crossLef);
+                intersect(_nk, _nb, kTop, bTop, out crossTop);
+                intersect(_nk, _nb, kRight, bRight, out crossRig);
+                intersect(_nk, _nb, kBottom, bBottom, out crossBot);
+            }
+            else
+            {
+                //нет пересечения
+            }
         }
+        static double kLeft;
+        static double bLeft;
+        static double kTop;
+        static double bTop;
+        static double kRight;
+        static double bRight;
+        static double kBottom;
+        static double bBottom;
+
+        public static void InitStatic(Point MaxCoord, double ElWidth, double ElHigth)
+        {
+            MaxTarget.X = MaxCoord.X - ElWidth;
+            MaxTarget.Y = MaxCoord.Y - ElHigth;
+            GetCanon(new Point(0, 0), new Point(MaxTarget.X, 0), out kTop, out bTop);
+            GetCanon(new Point(0, 0), new Point(0, MaxTarget.Y), out kLeft, out bLeft);
+            GetCanon(new Point(MaxTarget.X, 0), new Point(MaxTarget.X, MaxTarget.Y), out kRight, out bRight);
+            GetCanon(new Point(0, MaxTarget.Y), new Point(MaxTarget.X, MaxTarget.Y), out kBottom, out bBottom);
+        }
+        public static Point CreateEndPoint(Direction_h _H, Direction_w _W, Point stPoint, double angl)
+        {
+            //GetNewDirection(angle_on_target);
+            double kat;
+            double max_angle;
+            //ВОПРОС ВЫБОРА НАПРАВЛЕНИЯ для вектора..
+            //if (_W == Direction_w.Right)
+            //    _Max_target.X -= l.Width;
+            //if (_H == Direction_h.Down)
+            //    _Max_target.Y -= l.Height;
+            double Left = stPoint.X;
+            double Top = stPoint.Y;
+            Point Cur_target = new Point();
+            if (_W == Direction_w.Left)
+            {
+                kat = stPoint.X;
+                Cur_target.X = 0;
+            }
+            else
+            {
+                kat = MaxTarget.X - Left; //+ l.Width / 2;
+                Cur_target.X = MaxTarget.X;
+            }
+            if (_H == Direction_h.Up)
+                max_angle = Math.Atan(Top / kat) / Math.PI * 180;
+            else
+                max_angle = Math.Atan((MaxTarget.Y - Top) /*- l.Height)*/ / kat) / Math.PI * 180;
+
+            if (max_angle < 0) max_angle = 0;
+            double tar_kat = kat * Math.Tan(angl * Math.PI / 180);
+            if (angl < max_angle)
+            {
+                if (_H == Direction_h.Up)
+                    Cur_target.Y = Top - tar_kat;
+                else
+                    Cur_target.Y = Top + tar_kat;
+            }
+            else
+            {
+                if (_H == Direction_h.Up)
+                {
+                    tar_kat = (tar_kat - Top) / Math.Tan(angl * Math.PI / 180);
+                    Cur_target.Y = 0;
+                }
+                else
+                {
+                    tar_kat = Math.Abs(Top + tar_kat - MaxTarget.Y) / Math.Tan(angl * Math.PI / 180);
+                    Cur_target.Y = MaxTarget.Y;
+                }
+                if (_W == Direction_w.Left)
+                {
+                    Cur_target.X = 0 + tar_kat;
+                }
+                else
+                {
+                    Cur_target.X = MaxTarget.X - tar_kat;
+                }
+            }
+            return Cur_target;
+        }
+
     }
     public class ElState
     {
-        DoubleAnimation anim2;
-        DoubleAnimation anim1;
-        public bool need_ani = true;
+        private DoubleAnimation anim2;
+        private DoubleAnimation anim1;
+        private Point cur_target;
+        private Point last_target;
+        //private double curr_angle = 0.0;
+        private Canvas owner;
+        private Ellipse tar;
+        private Ellipse tar_last;
+        private int _id;
+        private Direction_w cur_dir_w = Direction_w.None;
+        private Direction_h cur_dir_h = Direction_h.None;
+        private bool need_ani = true;
+        private Point Max_target = new Point();
+        private Ellipse l { get; set; } = null;
+
+        public double time_ { get; set; }
+        public double Left => Canvas.GetLeft(l);
+        public double Top => Canvas.GetTop(l);
+        public Point Center => new Point(Left / 2, Top / 2);
+        public double Width => l.Width;
+        public double Height => l.Height;
+        public int Id => _id;
+        public Direction_w Cur_dir_w { get => cur_dir_w; set => cur_dir_w = value; }
+        public Direction_h Cur_dir_h { get => cur_dir_h; set => cur_dir_h = value; }
+        public Point Cur_target { get => cur_target; set => cur_target = value; }
+        public Point Last_target
+        {
+            get
+            {
+                if (last_target is null)
+                {
+                    last_target = cur_target;
+                }
+                return last_target;
+            }
+            set => last_target = value;
+        }
+        public bool Use_old_coord { get; set; } = false;
         public ElState(Ellipse el, Canvas par, bool need_anim = true)
         {
             _id = ++Dopnik.Id;
@@ -138,63 +301,27 @@ namespace кружочек
             tar_last.Stroke = new SolidColorBrush(Colors.Black);
             tar_last.Fill = this.l.Fill;
             tar_last.Opacity = 0.5;
+            Cur_target = new Point();
+            Last_target = new Point(Left, Top);
             if (need_anim)
             {
                 CalcNewPointsToMove();
             }
         }
-        private Canvas owner;
-        private Ellipse tar;
-        private Ellipse tar_last;
-        //Пока с прошлой перерисовки не пройдет изменение координат на половину величины, не реагируем
-        private bool resent_changed = false;
-        public bool Resent_changed
-        {
-            get => resent_changed; set
-            {
-                resent_changed = value;
-                if (value)
-                {
-                    Debug.WriteLine($"BALL {Id} is FRESES");
-                    freeze_point.X = Left;
-                    freeze_point.Y = Top;
-                }
-            }
-        }
-        Point freeze_point = new Point();
+
         private void L_LayoutUpdated(object sender, EventArgs e)
         {
             if (Left == Cur_target.X || Top == Cur_target.Y)
             {
-                owner.Children.Remove(tar);
+                //owner.Children.Remove(tar);
                 CalcNewPointsToMove();
             }
         }
-
         public void Change_size_of_Target(Size s)
         {
             Max_target.X = s.Width;
             Max_target.Y = s.Height;
         }
-        public double Left => Canvas.GetLeft(l);
-        public double Top => Canvas.GetTop(l);
-        public Point Center => new Point(Left / 2, Top / 2);
-        public double Width => l.Width;
-        public double Height => l.Height;
-        private int _id;
-        public int Id => _id;
-        Point Max_target = new Point();
-
-        private Direction_w cur_dir_w = Direction_w.None;
-        private Direction_h cur_dir_h = Direction_h.None;
-
-        Ellipse l { get; set; } = null;
-        public Direction_w Cur_dir_w { get => cur_dir_w; set => cur_dir_w = value; }
-        public Direction_h Cur_dir_h { get => cur_dir_h; set => cur_dir_h = value; }
-        public Point Cur_target { get => cur_target; set => cur_target = value; }
-
-        private Point cur_target;
-
         public void MoveTo(double time_anim)
         {
             //var q = DateTime.UtcNow - Process.GetCurrentProcess().StartTime.ToUniversalTime();
@@ -347,7 +474,7 @@ namespace кружочек
             {
                 double ang = (double)angle_on_target;
 
-                if (curr_angle >= ang)
+                if (Curr_Angle >= ang)
                 {
                     // 1 двигаюсь вниз вправо
                     // 2 двигаюсь вниз влево
@@ -459,89 +586,91 @@ namespace кружочек
 
             }
         }
-        double curr_angle = 0.0;
+        public double Last_Angle = 0;
+        public double Curr_Angle = 0;
         public void CalcNewPointsToMove(ElState el1 = null) //Direction_h dop_h = Direction_h.None, Direction_w dop_w = Direction_w.None)
         {
             if (!need_ani) return;
+
             double? angle_on_target = null;
-            double last_angle = curr_angle;
+            //double last_angle = curr_angle;
+            Last_Angle = Curr_Angle;
             Direction_h last_dir_h = Cur_dir_h;
             Direction_w last_dir_w = Cur_dir_w;
             double popravka_alfa = 0d;
             //ТЕСТИРУЕМ ПОЛУЧЕНИЯ УРОВНЕНИЯ ПРЯМОЙ
             if (el1 != null)
             {
-                var q = Dopnik.UngleOfVectors(new Point(Left, Top), Cur_target, new Point(el1.Left, el1.Top), el1.Cur_target);
-                //считаем угол между векторами и получаем поправку к углу отражения
-                angle_on_target = Dopnik.GetAngle(Center, el1.Center);
-                //Определить кто является основным объектом (целится в другой объект)
-                //теоретически так должно быть всегда, но есть ситуации когда один догоняет другой в жопу.
-                //и тогда того, кого догнали направление не меняет
-                //Debug.WriteLine($"{angle_on_target}");
-                //// 1 сверху слева двигаюсь вниз вправо
-                //// 2 сверху справа двигаюсь вниз влево
-                //// 3 снизу справа двигаюсь вверх влево
-                //// 4 снизу слева двигаюсь вверх вправо
-                //if(curr_angle >= angle_on_target)
-                //{
-                //    //1 ушел вниз влево
-                //    //2 ушел вниз вправо
-                //    //3 ушел вниз вправо
-                //    //4 ушел вверх влево
-                //}
-                //else
-                //{
-                //    //1 ушел вверх вправо
-                //    //2 ушел вверх влево
-                //    //3 ушел вверх влево
-                //    //4 ушул вниз вправо
-                //}
+                //расчет идет неверно! если это вторая точка в расчете, потому что считает от уже рассчитанной новой точки, а не от исходной
+                Point p = null;
+                if (el1.Use_old_coord)
+                    p = el1.Last_target;
+                else
+                    p = el1.Cur_target;
 
-                popravka_alfa = q - curr_angle;
-                curr_angle += popravka_alfa;
-                if (curr_angle > 90)
-                    curr_angle -= 90;
+                double angl_sec;//угол на перпендикуляр относительно которого считаем рекошет
+                //Это значит что ел уже пересчитали
+                if (el1.Use_old_coord)
+                {
+                    angl_sec = el1.Last_Angle;
+                }
+                else
+                {
+                    angl_sec = el1.Curr_Angle;
+                }
+                //double popr = Curr_Angle - angl_sec; //-11.9 = 35.2 - 47.1
+                double ugol_padenia = 90d - Curr_Angle; //если в стенку 90 - 47.1 = 42.9 \\ 90-28.1 = 61.9
+                double buf = ugol_padenia - angl_sec; //42.9 - 35.2 = 7.7 \\ 61.9-81.5= -19.6
+                Curr_Angle += buf * 2; // 28.1 + -19.6*2 = 
+
+                //ange = 47.1 + 7.7*2 = 62.5
+                //Curr_Angle = ugol_padenia + popr;
+
+
+                el1.Use_old_coord = false;
+
+
+
+                var q = Dopnik.UngleOfVectors(new Point(Left, Top), Cur_target, new Point(el1.Left, el1.Top), p);
+                angle_on_target = q;
+                //popravka_alfa = q - Curr_Angle;
+                //Curr_Angle += popravka_alfa;
+                //if (Curr_Angle > 90)
+                //    Curr_Angle -= 90;
             }
             //МЕНЯЕМ НАПРАВЛЕНИЕ ЕСЛИ УПЕРЛИСЬ В ГРАНИЦУ
             GetNewDirection(angle_on_target);
             //ЕСЛИ ВНИЗ ИЛИ ВПРАВО, уменьшим границы МАКС на величину шара
-            Point _Max_target = new Point(Max_target.X, Max_target.Y);
             double kat;
             double max_angle;
+
+            //ДУМАЮ ТУТ НАДО ДЕЛАТЬ БЕЗ ДИРОВ ЭТИХ, А ЧИСТО НА ОБЩЕМ УГЛУ
+            //искать четверть по градусам, брать катет в четверти
+            //а потом угол докладывать обратно
+
+            Point _Max_target = new Point(Max_target.X, Max_target.Y);
             if (cur_dir_w == Direction_w.Right)
                 _Max_target.X -= l.Width;
             if (cur_dir_h == Direction_h.Down)
                 _Max_target.Y -= l.Height;
-            var _Cur_target = Cur_target;
             if (cur_dir_w == Direction_w.Left)
             {
                 kat = Left;
-                _Cur_target.X = 0;
+                Cur_target.X = 0;
             }
             else
             {
                 kat = _Max_target.X - Left; //+ l.Width / 2;
-                _Cur_target.X = _Max_target.X;
+                Cur_target.X = _Max_target.X;
             }
 
+            //если нету от кого считать, считаем рандомный угол
             if (el1 == null)
-                curr_angle = Dopnik.r_path.Next(0, 89) + (Dopnik.r_path.Next(0, 99) / 100.0);
-            else
             {
-                //owner.Children.Remove(tar);
-                //Canvas.SetLeft(tar_last, Canvas.GetLeft(tar));
-                //Canvas.SetTop(tar_last, Canvas.GetTop(tar));
+                Curr_Angle = Dopnik.r_path.Next(0, 89) + (Dopnik.r_path.Next(0, 99) / 100.0);
             }
 
-            //if (dop_h == Direction_h.None || dop_w == Direction_w.None)
-            //{
-            //    curr_angle = Dopnik.r_path.Next(0, 89) + (Dopnik.r_path.Next(0, 99) / 100.0);
-            //}
-            //else
-            //{
-            //    //int pause = 0;
-            //    owner.Children.Remove(tar);
-            //}
+
             if (cur_dir_h == Direction_h.Up)
                 max_angle = Math.Atan(Top / kat) / Math.PI * 180;
             else
@@ -551,8 +680,8 @@ namespace кружочек
 
 
             // double alfa = Dopnik.r_path.Next(0, 89) + (Dopnik.r_path.Next(0, 99) / 100.0); //рандомим угол
-            double tar_kat = kat * Math.Tan(curr_angle * Math.PI / 180);
-            if (curr_angle < max_angle)
+            double tar_kat = kat * Math.Tan(Curr_Angle * Math.PI / 180);
+            if (Curr_Angle < max_angle)
             {
                 //первый спопсоб для простого
 
@@ -562,9 +691,9 @@ namespace кружочек
                 //точка по y = если вверх, то длина от у0 до координаты - таргет катет
                 //              если вниз, то длина от ymax до координаты - таргет катет
                 if (cur_dir_h == Direction_h.Up)
-                    _Cur_target.Y = Top - tar_kat;
+                    Cur_target.Y = Top - tar_kat;
                 else
-                    _Cur_target.Y = Top + tar_kat;
+                    Cur_target.Y = Top + tar_kat;
             }
             else
             {
@@ -578,31 +707,34 @@ namespace кружочек
                 //              если вниз, макс
                 if (Cur_dir_h == Direction_h.Up)
                 {
-                    tar_kat = (tar_kat - Top) / Math.Tan(curr_angle * Math.PI / 180);
-                    _Cur_target.Y = 0;
+                    tar_kat = (tar_kat - Top) / Math.Tan(Curr_Angle * Math.PI / 180);
+                    Cur_target.Y = 0;
                 }
                 else
                 {
-                    tar_kat = Math.Abs(Top + tar_kat - _Max_target.Y) / Math.Tan(curr_angle * Math.PI / 180);
-                    _Cur_target.Y = _Max_target.Y;
+                    tar_kat = Math.Abs(Top + tar_kat - _Max_target.Y) / Math.Tan(Curr_Angle * Math.PI / 180);
+                    Cur_target.Y = _Max_target.Y;
                 }
                 if (Cur_dir_w == Direction_w.Left)
                 {
-                    _Cur_target.X = 0 + tar_kat;
+                    Cur_target.X = 0 + tar_kat;
                 }
                 else
                 {
-                    _Cur_target.X = _Max_target.X - tar_kat;
+                    Cur_target.X = _Max_target.X - tar_kat;
                 }
             }
-            Cur_target = _Cur_target;
-            double path = Math.Sqrt(Math.Pow(Left + l.Width / 2 - _Cur_target.X, 2) + Math.Pow(Top + l.Height / 2 - _Cur_target.Y, 2));
+
+            //имеем угол и координаты. ищем угол (глобальный) перпендикуляра к этому катету.. лол он на удивление равен углу падения
+
+            double path = Math.Sqrt(Math.Pow(Left + l.Width / 2 - Cur_target.X, 2) + Math.Pow(Top + l.Height / 2 - Cur_target.Y, 2));
             double speed = 100;
             time_ = path / speed;
+
             Canvas.SetLeft(tar_last, Canvas.GetLeft(tar));
             Canvas.SetTop(tar_last, Canvas.GetTop(tar));
-            Canvas.SetLeft(tar, _Cur_target.X);
-            Canvas.SetTop(tar, _Cur_target.Y);
+            Canvas.SetLeft(tar, Cur_target.X);
+            Canvas.SetTop(tar, Cur_target.Y);
 
             if (!owner.Children.Contains(tar))
                 owner.Children.Add(tar);
@@ -612,21 +744,201 @@ namespace кружочек
             {
                 Debug.WriteLine($"EL {Id} LastDirW = {Enum.GetName(typeof(Direction_w), last_dir_w)} LastDirH = {Enum.GetName(typeof(Direction_h), last_dir_h)}" +
                     $" HCurDirW = {Enum.GetName(typeof(Direction_w), cur_dir_w)} CurDirH = {Enum.GetName(typeof(Direction_h), cur_dir_h)},\n" +
-                    $" AngleBefore = {String.Format("{0:0.000}",last_angle)}, AngleCorrect = {String.Format("{0:0.000}", curr_angle)} " +
-                    $"AngToObj = {String.Format("{0:0.000}", angle_on_target)}, Popravka = {String.Format("{0:0.000}", popravka_alfa)}");
+                    $" AngleBefore = {String.Format("{0:0.000}", Last_Angle)}, AngleCorrect = {String.Format("{0:0.000}", Curr_Angle)} " +
+                    $"AngToObj = {String.Format("{0:0.000}", angle_on_target)}, Popravka = {String.Format("{0:0.000}", popravka_alfa)}\n" +
+                    $"LastL = {String.Format("{0:0.000}", Last_target.X)}, LastT = {String.Format("{0:0.000}", Last_target.Y)},\n" +
+                    $"CurL = {String.Format("{0:0.000}", Left)}, CurT = {String.Format("{0:0.000}", Top)},\n" +
+                    $"TarX = {String.Format("{0:0.000}", Cur_target.X)}, TarY = {String.Format("{0:0.000}", Cur_target.Y)},\n " +
+                    $"Max_angle = {String.Format("{0:0.000}", max_angle)}, Tar_Kat = {String.Format("{0:0.000}", tar_kat)}");
                 anim1.BeginTime = null;
                 l.BeginAnimation(Canvas.TopProperty, anim1);
                 anim2.BeginTime = null;
                 l.BeginAnimation(Canvas.LeftProperty, anim2);
+
             }
             else
                 MoveTo(time_);
+            Last_target = new Point(Cur_target);
             //БАГИ
             //1. недостаточный угол корректировки (или слишком большой)
 
 
         }
-        public double time_ = 0;
+        ////min,max
+        //Point next_max_angle = new Point(0, 359);
+        //public void TestNew()
+        //{
+        //    double curr_angle;
+        //    if (next_max_angle.Y < 360d)
+        //    {
+        //        curr_angle = Dopnik.r_path.Next((int)next_max_angle.X, (int)next_max_angle.Y) + (Dopnik.r_path.Next(0, 99) / 100.0);
+        //    }
+        //    else
+        //    {
+        //        var rnd = Dopnik.r_path.Next(0, 1);
+        //        if (rnd == 0)
+        //            curr_angle = Dopnik.r_path.Next((int)next_max_angle.X, 359) + (Dopnik.r_path.Next(0, 99) / 100.0);
+        //        else
+        //            curr_angle = Dopnik.r_path.Next(0, 89) + (Dopnik.r_path.Next(0, 99) / 100.0);
+        //    }
+
+        //    //пока без четвертей, ибо если б хотел другую, то заролял бы меньше
+        //    //заролял 287 градуса
+        //    //ищем точку пересечения с окраиной
+        //    //все таки ищем четверть для опередления угла ограничения
+        //    //
+        //    Quaters qt = GetQuat(curr_angle);
+        //    double kat_x = 0d;
+        //    double kat_y = 0d;
+        //    double max_angle = 0d;
+        //    double loc_angle = 0d;
+        //    Point cur_tar = new Point();
+        //    switch (qt)
+        //    {
+        //        case Quaters.Fst:
+        //            kat_x = Max_target.X - Left;
+        //            kat_y = Top;
+        //            loc_angle = curr_angle;
+        //            break;
+        //        case Quaters.Sec:
+        //            kat_x = Max_target.X - Left;
+        //            kat_y = Max_target.Y - Top;
+        //            loc_angle = curr_angle - 90d;
+        //            break;
+        //        case Quaters.Thr:
+        //            kat_x = Left;
+        //            kat_y = Max_target.Y - Top;
+        //            loc_angle = curr_angle - 180d;
+        //            break;
+        //        case Quaters.Fou:
+        //            kat_x = Left;
+        //            kat_y = Top;
+        //            loc_angle = curr_angle - 270d;
+        //            break;
+        //    }
+        //    max_angle = Math.Atan(kat_y / kat_x) / Math.PI * 180;
+        //    double tar_kat = kat_x * Math.Tan(loc_angle * Math.PI / 180);
+
+        //    if (loc_angle < max_angle)
+        //    {
+        //        switch (qt)
+        //        {
+        //            case Quaters.Fst:
+        //            case Quaters.Fou:
+        //                cur_tar.Y = Top - tar_kat;
+        //                if (qt == Quaters.Fou)
+        //                    cur_tar.X = 0;
+        //                else
+        //                    cur_tar.X = Max_target.X;
+        //                break;
+        //            case Quaters.Sec:
+        //            case Quaters.Thr:
+        //                cur_tar.Y = Top + tar_kat;
+        //                if (qt == Quaters.Thr)
+        //                    cur_tar.X = 0;
+        //                else
+        //                    cur_tar.X = Max_target.X;
+        //                break;
+        //        }
+        //        switch (qt)
+        //        {
+        //            case Quaters.Fst:
+        //            case Quaters.Sec:
+        //                //min
+        //                next_max_angle.X = 180d;
+        //                //max
+        //                next_max_angle.Y = 359d;
+        //                break;
+        //            case Quaters.Thr:
+        //            case Quaters.Fou:
+        //                //min
+        //                next_max_angle.X = 0d;
+        //                //max
+        //                next_max_angle.Y = 179d;
+        //                break;
+        //        }
+        //    }
+        //    else
+        //    {
+        //        switch (qt)
+        //        {
+        //            case Quaters.Fst:
+        //            case Quaters.Fou:
+        //                tar_kat = (tar_kat - Left) / Math.Tan(loc_angle * Math.PI / 180);
+        //                cur_tar.Y = 0;
+        //                if (qt == Quaters.Fou)
+        //                    cur_tar.X = tar_kat;
+        //                else
+        //                    cur_tar.X = Max_target.X - tar_kat;
+        //                break;
+        //            case Quaters.Sec:
+        //            case Quaters.Thr:
+        //                tar_kat = (tar_kat - (Max_target.Y - Top)) / Math.Tan(loc_angle * Math.PI / 180);
+        //                if (qt == Quaters.Thr)
+        //                    cur_tar.X = tar_kat;
+        //                else
+        //                    cur_tar.X = Max_target.X - tar_kat;
+        //                cur_tar.Y = Max_target.Y;
+        //                break;
+        //        }
+        //        switch (qt)
+        //        {
+        //            case Quaters.Fst:
+        //            case Quaters.Fou:
+        //                //min
+        //                next_max_angle.X = 90d;
+        //                //max
+        //                next_max_angle.Y = 269d;
+        //                break;
+        //            case Quaters.Sec:
+        //            case Quaters.Thr:
+        //                //min
+        //                next_max_angle.X = 270d;
+        //                //max
+        //                next_max_angle.Y = 359d + 90d;
+        //                break;
+        //        }
+        //    }
+
+
+        //    double path = Math.Sqrt(Math.Pow(Left - cur_tar.X, 2) +
+        //        Math.Pow(Top - Cur_target.Y, 2));
+        //    double speed = 100;
+        //    time_ = path / speed;
+
+        //    Last_target = cur_tar;
+
+        //    //Canvas.SetLeft(tar_last, Last_target.X);//Canvas.GetLeft(tar));
+        //    //Canvas.SetTop(tar_last, Last_target.Y);//Canvas.GetTop(tar));
+        //    Canvas.SetLeft(tar, cur_tar.X + l.Width / 2);
+        //    Canvas.SetTop(tar, cur_tar.Y + l.Height / 2);
+
+        //    if (!owner.Children.Contains(tar))
+        //        owner.Children.Add(tar);
+        //    if (!owner.Children.Contains(tar_last))
+        //        owner.Children.Add(tar_last);
+        //    Cur_target = cur_tar;
+        //    MoveTo(time_);
+        //}
+        //enum Quaters
+        //{
+        //    Fst = 1,
+        //    Sec = 2,
+        //    Thr = 3,
+        //    Fou = 4
+        //}
+        //private static Quaters GetQuat(double angle)
+        //{
+        //    if (angle >= 0d && angle < 90d)
+        //        return Quaters.Fst;
+        //    else if (angle >= 90d && angle < 180d)
+        //        return Quaters.Fst;
+        //    else if (angle >= 180d && angle < 270d)
+        //        return Quaters.Thr;
+        //    else //if (angle >= 270d || angle < 360d)
+        //        return Quaters.Fou;
+
+        //}
     }
 
 
