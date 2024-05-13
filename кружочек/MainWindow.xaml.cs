@@ -55,9 +55,9 @@ namespace кружочек
                     if (r1.IntersectsWith(r2))
                     {
                         pares.Add(new KeyValuePair<int, int>(el1.Id, el2.Id));
-                        el2.CalcNewPointsToMove(el1);//, el1.Cur_dir_h, el1.Cur_dir_w);
+                        //el2.CalcNewPointsToMove(el1);//, el1.Cur_dir_h, el1.Cur_dir_w);
                         el2.Use_old_coord = true;
-                        el1.CalcNewPointsToMove(el2);//, buf_h, buf_w);
+                        //el1.CalcNewPointsToMove(el2);//, buf_h, buf_w);
                     }
                 }
             }
@@ -99,7 +99,7 @@ namespace кружочек
 
         private void JopaCanvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            Ellipse l = new Ellipse() { Width = 30, Height = 30 };
+            Ellipse l = new Ellipse() { Width = Dopnik.EllipseSize.X, Height = Dopnik.EllipseSize.Y };
             l.Stroke = new SolidColorBrush(Colors.Black);
             l.Fill = new SolidColorBrush(Color.FromRgb(Convert.ToByte(r_color.Next(0, 255)),
          Convert.ToByte(r_color.Next(0, 255)), Convert.ToByte(r_color.Next(0, 255))));
@@ -114,7 +114,7 @@ namespace кружочек
         }
         private void JopaCanvas_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
-            Ellipse l = new Ellipse() { Width = 30, Height = 30 };
+            Ellipse l = new Ellipse() { Width = Dopnik.EllipseSize.X, Height = Dopnik.EllipseSize.Y };
             l.Stroke = new SolidColorBrush(Colors.Black);
             l.Fill = new SolidColorBrush(Color.FromRgb(Convert.ToByte(r_color.Next(0, 255)),
          Convert.ToByte(r_color.Next(0, 255)), Convert.ToByte(r_color.Next(0, 255))));
@@ -127,20 +127,12 @@ namespace кружочек
             x.Cur_dir_w = Direction_w.None;
             lst.Add(x);
         }
-        private void X_Drawed(int id, double left, double top)
-        {
-            //Debug.WriteLine($"BALL {id} CHANGE!");
-            //var a = lst.Where(t => t.Id != id && Math.Abs(t.Left - left) < 31 && Math.Abs(t.Top - top) < 31);
-            //if (a.Any())
-            //{
-            //    Debug.WriteLine($"BALL {id} REQUEST CHANGE!");
-            //    lst.Single(t => t.Id == id).CalcNewPointsToMove(a.ToList());
-            //}
-        }
-
         private void JopaCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            lst.ForEach(t => t.Change_size_of_Target(e.NewSize));
+            //lst.ForEach(t => t.Change_size_of_Target(e.NewSize));
+            if (e.PreviousSize.Width == 0 && e.PreviousSize.Height == 0)
+                return;
+            Dopnik.ReInitStatic_bySize(new Point(e.NewSize.Width, e.NewSize.Height));
         }
         private void Window_LocationChanged(object sender, EventArgs e)
         {
@@ -153,7 +145,13 @@ namespace кружочек
         {
             lst.ForEach(t => t.MoveTo(t.time_));
         }
+        bool statinit = false;
+        private void Window_ContentRendered(object sender, EventArgs e)
+        {
+            if (statinit)
+                return;
+            Dopnik.InitStatic(new Point(JopaCanvas.ActualWidth, JopaCanvas.ActualHeight), 30, 30);
 
-
+        }
     }
 }

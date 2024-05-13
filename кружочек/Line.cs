@@ -37,8 +37,8 @@ namespace кружочек
         public Point Start { get; set; }
         public Point End { get; set; }
         public Point Center { get => center == null ? center = new Point((Start.X + End.X) / 2, (Start.Y + End.Y) / 2) : center; }
-        public Point Vector => vector == null ? GetVector() : vector;
-        public double Vec_Module => vec_module == 0 ? Module_of_vec() : vec_module;
+        public Point Vector => vector == null ? vector = GetVector() : vector;
+        public double Vec_Module => vec_module == 0 ? vec_module = Module_of_vec() : vec_module;
         public double Length => Vec_Module;
         public double K { get; set; }
         public double B { get; set; }
@@ -85,18 +85,34 @@ namespace кружочек
         //задавать угол от 0 до 180
         public void CreateEndPoint(double angl, Direction_h _H)
         {
-            Point buf = new Point(Start);
-            Start.X -= 1;
-            End = new Point(buf);
-            End.X += 1;
-            GetCanon();
+            //Point buf = new Point(Start);
+            //Start.X -= 1;
+            //End = new Point(buf);
+            //End.X += 1;
+            //y - y0 = k(x-x0)
             Angle = angl;
-            intersect(Dopnik.Left, out Point crossLef);
-            intersect(Dopnik.Top, out Point crossTop);
-            intersect(Dopnik.Right, out Point crossRig);
-            intersect(Dopnik.Bottom, out Point crossBot);
+            //B = -1 * K * Start.X + Start.Y;
+            //B = Start.Y;//Dopnik.MaxTarget.Y;
+            //попробовать сместить центр на точку в которой стоим. тогда B будет 0 
+            B = 0;
+            Line buf = new Line(new Point(0, 0), null);
+
+            Line _left = new Line(new Point(0 - Dopnik.MaxTarget.X / 2 + Start.X, Dopnik.MaxTarget.Y / 2 + Start.Y), 
+                new Point(0 - Dopnik.MaxTarget.X / 2 + Start.X, 0 - Dopnik.MaxTarget.Y / 2 + Start.Y));
+
+
+            Line _top = new Line(new Point(0 - Dopnik.MaxTarget.X / 2 + Start.X, Dopnik.MaxTarget.Y / 2 + Start.Y),
+                new Point(Dopnik.MaxTarget.X / 2 + Start.X, Dopnik.MaxTarget.Y / 2 + Start.Y));
+            Line _bot = new Line(new Point(0 - Dopnik.MaxTarget.X / 2 + Start.X, 0 - Dopnik.MaxTarget.Y / 2 + Start.Y),
+                new Point(Dopnik.MaxTarget.X / 2 + Start.X, 0 - Dopnik.MaxTarget.Y / 2 + Start.Y));
+            Line _right = new Line(new Point(Dopnik.MaxTarget.X / 2 + Start.X, Dopnik.MaxTarget.Y / 2 + Start.Y),
+                new Point(Dopnik.MaxTarget.X / 2 + Start.X, 0 - Dopnik.MaxTarget.Y / 2 + Start.Y));
+
+            buf.intersect(_left, out Point crossLef);
+            buf.intersect(_top, out Point crossTop);
+            buf.intersect(_right, out Point crossRig);
+            buf.intersect(_bot, out Point crossBot);
             List<Point> lstl = new List<Point>() { crossBot, crossTop, crossLef, crossRig }.Where(t => t != null).ToList();
-            Start.X = buf.X;
             if (lstl.Count == 2)
             {
                 switch (_H)
