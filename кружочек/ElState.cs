@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -21,38 +22,15 @@ namespace кружочек
         Down,
         None
     }
-    public class Point
-    {
-        public double X { get; set; }
-        public double Y { get; set; }
-        public Point(Point p)
-        {
-            X = p.X;
-            Y = p.Y;
-        }
-        public Point(double x, double y)
-        {
-            X = x;
-            Y = y;
-        }
-        public Point()
-        {
-            X = 0;
-            Y = 0;
-        }
-        public override string ToString()
-        {
-            return $"{X}:{Y}";
-        }
-    }
+
     public static class Dopnik
     {
         public static int Id;
         public static Random r_path = new Random((int)DateTime.Now.Ticks);
-        const double EPS = 1e-9;
+        public const double EPS = 1e-9;
         public static Point MaxTarget { get; set; } = new Point();
 
-        private static Point GetVector(Point cur1, Point tar1)
+        public static Point GetVector(Point cur1, Point tar1)
         {
             return new Point(tar1.X - cur1.X, tar1.Y - cur1.Y);
         }
@@ -91,7 +69,7 @@ namespace кружочек
             b = -1 * (((ay * start.X) - (start.Y * ax)) / ax);
         }
 
-        static double det(double a, double b, double c, double d)
+        public static double det(double a, double b, double c, double d)
         {
             return a * d - b * c;
         }
@@ -113,9 +91,43 @@ namespace кружочек
             return true;
         }
 
-        
+
+        public static void GetNewLine(Line ln, Line orto)
+        {
+            double angl = ln.UngleOfLines(orto);
+            double acute, obtuse = 0; //острый и тупой угол
+            if (angl > 90)
+            {
+                obtuse = angl;
+                acute = 180d - angl;
+            }
+            else
+            {
+                obtuse = 180d - angl;
+                acute = angl;
+            }
+            double answacute = acute * 2; //новый угол движения от пересечения
+            double answobtuse = obtuse - acute;
+            //теперь нужно определить в какую сторону ехать. в тупую или в острую
+            //и в какую четверть мы приедем
+            Line nw = ln.Copy();
+            nw.Angle = answacute; //?
+            //intersect(nw.K, nw.B, kLeft, bLeft, out Point crossLef);
+            //intersect(nw.K, nw.B, kTop, bTop, out Point crossTop);
+            //intersect(nw.K, nw.B, kRight, bRight, out Point crossRig);
+            //intersect(nw.K, nw.B, kBottom, bBottom, out Point crossBot);
+            ////по идее будет одна точка, хотя хуй его знает
+            //List<Point> lstl = new List<Point>() { crossBot, crossTop, crossLef, crossRig }.Where(t => t != null).ToList();
+        }
+
         //может чтоб было проще, ввести класс вектора, где сразу будт считаться вектора по точкам.. (ну или даже прямой, чтоб еше коэфы к и б хранить, да и длину)
-        public static Point GetOrtoector(double angle_from, Point st1, Point end1, Point st2, Point end2)
+        /// <summary>
+        /// Построение ортогональной линии
+        /// </summary>
+        /// <param name="ln1">Линия для которой считается орта</param>
+        /// <param name="ln2">Линия для вычисления точки пересечения с ln1</param>
+        /// <returns></returns>
+        public static Line GetOrtoLine(Line ln1, Line ln2)//double angle_from, Point st1, Point end1, Point st2, Point end2)
         {
             /*
              * 1. получили уравнение прямой GetCanon
@@ -132,52 +144,59 @@ namespace кружочек
             //alfa = atan(k);
             //знач направление определим тоже по точкам, но вручную сравнением
             //1
-            GetCanon(st1, end1, out double k1, out double b1);
+            //GetCanon(st1, end1, out double k1, out double b1);
             //2
-            GetCanon(st2, end2, out double k2, out double b2);
+            //GetCanon(st2, end2, out double k2, out double b2);
             //3
             Point answ = new Point();
-            if (intersect(k1, b1, k2, b2, out answ))
+            Line orto = null;
+            if (intersect(ln1.K, ln1.B, ln2.K, ln2.B, out answ))
             {
                 //пересечение
                 //Будем искать точки пересечения 
                 //y=kx+b знаем y с точки, знаем х с точки, знаем К через тангенс
                 //-b=-y+kx
                 //b=y-kx
-                Point crossLef = new Point();
-                Point crossTop = new Point();
-                Point crossRig = new Point();
-                Point crossBot = new Point();
-                double _nk = Math.Tan((90 - angle_from) * Math.PI / 180);
+                double _nk = Math.Tan((90 - ln1.Angle) * Math.PI / 180);
                 double _nb = answ.Y - _nk * answ.X;
                 //получим две точки пересчения минимум. Выяснить какие (можно через провреку по К но лень)
-                intersect(_nk, _nb, kLeft, bLeft, out crossLef);
-                intersect(_nk, _nb, kTop, bTop, out crossTop);
-                intersect(_nk, _nb, kRight, bRight, out crossRig);
-                intersect(_nk, _nb, kBottom, bBottom, out crossBot);
+                intersect(_nk, _nb, kLeft, bLeft, out Point crossLef);
+                intersect(_nk, _nb, kTop, bTop, out Point crossTop);
+                intersect(_nk, _nb, kRight, bRight, out Point crossRig);
+                intersect(_nk, _nb, kBottom, bBottom, out Point crossBot);
+                List<Point> ln = new List<Point>() { crossBot, crossTop, crossLef, crossRig }.Where(t => t != null).ToList();
+                if (ln.Count == 2)
+                {
+                    orto = new Line(ln[0], ln[1]);
+                }
+                else
+                {
+                    //error больше чем две точки или меньше
+                    throw new Exception();
+                }
+
             }
             else
             {
                 //нет пересечения
+                throw new Exception();
             }
+            return orto;
         }
-        static double kLeft;
-        static double bLeft;
-        static double kTop;
-        static double bTop;
-        static double kRight;
-        static double bRight;
-        static double kBottom;
-        static double bBottom;
 
+        public static Line Top;
+        public static Line Left;
+        public static Line Bottom;
+        public static Line Right;
         public static void InitStatic(Point MaxCoord, double ElWidth, double ElHigth)
         {
             MaxTarget.X = MaxCoord.X - ElWidth;
             MaxTarget.Y = MaxCoord.Y - ElHigth;
-            GetCanon(new Point(0, 0), new Point(MaxTarget.X, 0), out kTop, out bTop);
-            GetCanon(new Point(0, 0), new Point(0, MaxTarget.Y), out kLeft, out bLeft);
-            GetCanon(new Point(MaxTarget.X, 0), new Point(MaxTarget.X, MaxTarget.Y), out kRight, out bRight);
-            GetCanon(new Point(0, MaxTarget.Y), new Point(MaxTarget.X, MaxTarget.Y), out kBottom, out bBottom);
+
+            Top = new Line(new Point(0, 0), new Point(MaxTarget.X, 0));
+            Left = new Line(new Point(0, 0), new Point(0, MaxTarget.Y));
+            Right = new Line(new Point(MaxTarget.X, 0), new Point(MaxTarget.X, MaxTarget.Y));
+            Bottom = new Line(new Point(0, MaxTarget.Y), new Point(MaxTarget.X, MaxTarget.Y)); 
         }
         public static Point CreateEndPoint(Direction_h _H, Direction_w _W, Point stPoint, double angl)
         {
