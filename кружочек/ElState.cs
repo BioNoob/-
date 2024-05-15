@@ -28,6 +28,7 @@ namespace кружочек
         public static int Id;
         public static Random r_path = new Random((int)DateTime.Now.Ticks);
         public const double EPS = 1e-9;
+        public const double Speed = 100;
         public static Point MaxTarget { get; set; } = new Point();
         public static Point EllipseSize { get; set; }
         public static Point GetVector(Point cur1, Point tar1)
@@ -94,7 +95,7 @@ namespace кружочек
 
         public static void GetNewLine(Line ln, Line orto)
         {
-            double angl = ln.UngleOfLines(orto);
+            double angl = ln.AngleOfLines(orto);
             double acute, obtuse = 0; //острый и тупой угол
             if (angl > 90)
             {
@@ -120,15 +121,25 @@ namespace кружочек
             //List<Point> lstl = new List<Point>() { crossBot, crossTop, crossLef, crossRig }.Where(t => t != null).ToList();
         }
 
-        //может чтоб было проще, ввести класс вектора, где сразу будт считаться вектора по точкам.. (ну или даже прямой, чтоб еше коэфы к и б хранить, да и длину)
         /// <summary>
-        /// Построение ортогональной линии
+        /// Вернуть вектор для линии границы
         /// </summary>
-        /// <param name="ln1">Линия для которой считается орта</param>
-        /// <param name="ln2">Линия для вычисления точки пересечения с ln1</param>
+        /// <param name="pt"></param>
         /// <returns></returns>
-        //public static Line GetOrtoLine(Line ln1, Line ln2)//double angle_from, Point st1, Point end1, Point st2, Point end2)
-        //{
+        public static Line GetOrtoLineFromBorder(Point pt)//double angle_from, Point st1, Point end1, Point st2, Point end2)
+        {
+            if (pt.X == 0)
+                return new Line(pt, new Point(MaxTarget.X, pt.Y));
+            else if (pt.X == MaxTarget.X)
+                return new Line(pt, new Point(0, pt.Y));
+            else if (pt.Y == 0)
+                return new Line(pt, new Point(pt.X, MaxTarget.Y));
+            else if (pt.Y == MaxTarget.Y)
+                return new Line(pt, new Point(pt.X, 0));
+            else
+                return null;
+        }
+
         //    /*
         //     * 1. получили уравнение прямой GetCanon
         //     * 2. получили уравнение прямой GetCanon
@@ -184,19 +195,19 @@ namespace кружочек
         //    return orto;
         //}
 
-        public static Line Top;
-        public static Line Left;
-        public static Line Bottom;
-        public static Line Right;
+        //public static Line Top;
+        //public static Line Left;
+        //public static Line Bottom;
+        //public static Line Right;
         public static void ReInitStatic_bySize(Point MaxCoord)
         {
             MaxTarget.X = MaxCoord.X - EllipseSize.X;
             MaxTarget.Y = MaxCoord.Y - EllipseSize.Y;
 
-            Top = new Line(new Point(0, 0), new Point(MaxTarget.X, 0));
-            Left = new Line(new Point(0, 0), new Point(0, MaxTarget.Y));
-            Right = new Line(new Point(MaxTarget.X, 0), new Point(MaxTarget.X, MaxTarget.Y));
-            Bottom = new Line(new Point(0, MaxTarget.Y), new Point(MaxTarget.X, MaxTarget.Y));
+            //Top = new Line(new Point(0, 0), new Point(MaxTarget.X, 0));
+            //Left = new Line(new Point(0, 0), new Point(0, MaxTarget.Y));
+            //Right = new Line(new Point(MaxTarget.X, 0), new Point(MaxTarget.X, MaxTarget.Y));
+            //Bottom = new Line(new Point(0, MaxTarget.Y), new Point(MaxTarget.X, MaxTarget.Y));
         }
         public static void InitStatic(Point MaxCoord, double ElWidth, double ElHigth)
         {
@@ -277,7 +288,7 @@ namespace кружочек
         private Ellipse tar;
         private Ellipse tar_last;
         private int _id;
-        private Direction_w cur_dir_w = Direction_w.None;
+        //private Direction_w cur_dir_w = Direction_w.None;
         private Direction_h cur_dir_h = Direction_h.None;
         private bool need_ani = true;
         //private Point Max_target = new Point();
@@ -290,7 +301,7 @@ namespace кружочек
         public double Width => l.Width;
         public double Height => l.Height;
         public int Id => _id;
-        public Direction_w Cur_dir_w { get => cur_dir_w; set => cur_dir_w = value; }
+       // public Direction_w Cur_dir_w { get => cur_dir_w; set => cur_dir_w = value; }
         public Direction_h Cur_dir_h { get => cur_dir_h; set => cur_dir_h = value; }
 
         public Line CurLine { get => curLine; set => curLine = value; }
@@ -338,11 +349,11 @@ namespace кружочек
 
         private void L_LayoutUpdated(object sender, EventArgs e)
         {
-            //if (Left == Cur_target.X || Top == Cur_target.Y)
-            //{
-            //    //owner.Children.Remove(tar);
-            //    CalcNewPointsToMove();
-            //}
+            if (Left == CurLine.End.X || Top == CurLine.End.Y)
+            {
+                //owner.Children.Remove(tar);
+                CalcNextPointToMove();
+            }
         }
         //public void Change_size_of_Target(Size s)
         //{
@@ -450,20 +461,20 @@ namespace кружочек
             //}
             //else
             {
-                if (cur_dir_w == Direction_w.None)
-                    cur_dir_w = (Direction_w)Dopnik.r_path.Next(0, 1);
-                else
-                    switch (cur_dir_w)
-                    {
-                        case Direction_w.Left:
-                            if (CurLine.End.X <= l.Width) //уперлись в границу слева
-                                cur_dir_w = Direction_w.Right;
-                            break;
-                        case Direction_w.Right:
-                            if (CurLine.End.X >= Dopnik.MaxTarget.X - l.Width) //уперлись в границу справа
-                                cur_dir_w = Direction_w.Left;
-                            break;
-                    }
+                //if (cur_dir_w == Direction_w.None)
+                //    cur_dir_w = (Direction_w)Dopnik.r_path.Next(0, 1);
+                //else
+                //    switch (cur_dir_w)
+                //    {
+                //        case Direction_w.Left:
+                //            if (CurLine.End.X <= l.Width) //уперлись в границу слева
+                //                cur_dir_w = Direction_w.Right;
+                //            break;
+                //        case Direction_w.Right:
+                //            if (CurLine.End.X >= Dopnik.MaxTarget.X - l.Width) //уперлись в границу справа
+                //                cur_dir_w = Direction_w.Left;
+                //            break;
+                //    }
                 if (cur_dir_h == Direction_h.None)
                     cur_dir_h = (Direction_h)Dopnik.r_path.Next(0, 1);
                 else
@@ -487,7 +498,22 @@ namespace кружочек
             if (!need_ani) return;
             GetNewDirection();
             CurLine.CreateEndPoint(Dopnik.r_path.Next(0, 179) + (Dopnik.r_path.Next(0, 99) / 100.0), Cur_dir_h);
-
+            MoveTo(CurLine.Time);
+        }
+        //если пересечение от границ то используем этот метод. Если пересечение с другим ветором то через метод из Line
+        public void CalcNextPointToMove()
+        {
+            Line t = Dopnik.GetOrtoLineFromBorder(CurLine.End);
+            double angl = CurLine.AngleOfLines(t);
+            if (angl > 90)
+                angl = 180 - angl;
+            //angl *= 2;
+            //test
+            angl += 90;
+            GetNewDirection();
+            CurLine.Start = CurLine.End;
+            CurLine.CreateEndPoint(angl, cur_dir_h);
+            MoveTo(CurLine.Time);
         }
         //public void CalcNewPointsToMove(ElState el1 = null) //Direction_h dop_h = Direction_h.None, Direction_w dop_w = Direction_w.None)
         //{

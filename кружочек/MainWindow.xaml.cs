@@ -124,7 +124,7 @@ namespace кружочек
             JopaCanvas.Children.Add(l);
             var x = new ElState(l, JopaCanvas, false);
             x.Cur_dir_h = Direction_h.None;
-            x.Cur_dir_w = Direction_w.None;
+            //x.Cur_dir_w = Direction_w.None;
             lst.Add(x);
         }
         private void JopaCanvas_SizeChanged(object sender, SizeChangedEventArgs e)

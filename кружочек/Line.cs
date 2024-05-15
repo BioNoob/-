@@ -41,6 +41,7 @@ namespace кружочек
         public Point Vector => vector == null ? vector = GetVector() : vector;
         public double Vec_Module => vec_module == 0 ? vec_module = Module_of_vec() : vec_module;
         public double Length => Vec_Module;
+        public double Time => Length / Dopnik.Speed;
         public double K { get; set; }
         public double B { get; set; }
         public double Angle
@@ -86,15 +87,9 @@ namespace кружочек
         //задавать угол от 0 до 180
         public void CreateEndPoint(double angl, Direction_h _H)
         {
-            //Point buf = new Point(Start);
-            //Start.X -= 1;
-            //End = new Point(buf);
-            //End.X += 1;
-            //y - y0 = k(x-x0)
             Angle = angl - 90;
             B = -1 * K * Start.X + Start.Y;
             //B = Start.Y;//Dopnik.MaxTarget.Y;
-            //попробовать сместить центр на точку в которой стоим. тогда B будет 0 
             //B = 0;
             //y=kx+b
             //top = y=minY
@@ -102,29 +97,11 @@ namespace кружочек
             //bot = y=maxY
             //rg = x=maxX
 
-
             double xtop = (0 - B) / K; //при у=0
             double xbot = (Dopnik.MaxTarget.Y - B) / K; //при у=макс.у
             double yleft = 0 * K + B; //при х=0
             double yRight = Dopnik.MaxTarget.X * K + B; //при х=макс.х
 
-            //Line buf = new Line(new Point(0, 0), null);
-            //Line _left = new Line(new Point(0 - Dopnik.MaxTarget.X / 2 + Start.X, Dopnik.MaxTarget.Y / 2 + Start.Y), 
-            //    new Point(0 - Dopnik.MaxTarget.X / 2 + Start.X, 0 - Dopnik.MaxTarget.Y / 2 + Start.Y));
-            //Line _top = new Line(new Point(0 - Dopnik.MaxTarget.X / 2 + Start.X, Dopnik.MaxTarget.Y / 2 + Start.Y),
-            //    new Point(Dopnik.MaxTarget.X / 2 + Start.X, Dopnik.MaxTarget.Y / 2 + Start.Y));
-            //Line _bot = new Line(new Point(0 - Dopnik.MaxTarget.X / 2 + Start.X, 0 - Dopnik.MaxTarget.Y / 2 + Start.Y),
-            //    new Point(Dopnik.MaxTarget.X / 2 + Start.X, 0 - Dopnik.MaxTarget.Y / 2 + Start.Y));
-            //Line _right = new Line(new Point(Dopnik.MaxTarget.X / 2 + Start.X, Dopnik.MaxTarget.Y / 2 + Start.Y),
-            //    new Point(Dopnik.MaxTarget.X / 2 + Start.X, 0 - Dopnik.MaxTarget.Y / 2 + Start.Y));
-
-            //buf.intersect(_left, out Point crossLef);
-            //buf.intersect(_top, out Point crossTop);
-            //buf.intersect(_right, out Point crossRig);
-            //buf.intersect(_bot, out Point crossBot);
-            //List<Point> lstl = new List<Point>() { crossBot, crossTop, crossLef, crossRig }.Where(t => t != null).ToList();
-            //if (lstl.Count == 2)
-            //{
             switch (_H)
             {
                 case Direction_h.Up:
@@ -140,12 +117,51 @@ namespace кружочек
                         End = xbot > 0 && xbot < Dopnik.MaxTarget.X ? new Point(xbot, Dopnik.MaxTarget.Y) : new Point(Dopnik.MaxTarget.X, yRight);
                     break;
             }
-            //GetCanon();
-            //}
-            //else
-            //    throw new Exception();
 
         }
+        //public Line GetOrtoLineFromIntersect(Line ln2)
+        //{
+            //Point answ = new Point();
+            //Line orto = null;
+            ////if(ln2 != null)
+            ////{
+            //    //если пересечение не с 
+            ////}
+            ////if (intersect(ln2, out answ))
+            ////{
+            ////пересечение
+            ////Будем искать точки пересечения 
+            ////y=kx+b знаем y с точки, знаем х с точки, знаем К через тангенс
+            ////-b=-y+kx
+            ////b=y-kx
+            //double _nk = Math.Tan((90 - Angle) * Math.PI / 180);
+            //double _nb = answ.Y - _nk * answ.X;
+
+
+            ////получим две точки пересчения минимум. Выяснить какие (можно через провреку по К но лень)
+            //intersect(_nk, _nb, kLeft, bLeft, out Point crossLef);
+            //intersect(_nk, _nb, kTop, bTop, out Point crossTop);
+            //intersect(_nk, _nb, kRight, bRight, out Point crossRig);
+            //intersect(_nk, _nb, kBottom, bBottom, out Point crossBot);
+            //List<Point> ln = new List<Point>() { crossBot, crossTop, crossLef, crossRig }.Where(t => t != null).ToList();
+            //if (ln.Count == 2)
+            //{
+            //    orto = new Line(ln[0], ln[1]);
+            //}
+            //else
+            //{
+            //    //error больше чем две точки или меньше
+            //    throw new Exception();
+            //}
+
+            ////}
+            ////else
+            ////{
+            ////нет пересечения
+            ////throw new Exception();
+            ////}
+            //return orto;
+        //}
         public bool intersect(Line ln2, out Point res)
         {
             double bb1 = -1 * B;
@@ -179,7 +195,7 @@ namespace кружочек
         {
             return Vector.X * vec2.X + Vector.Y * vec2.Y;
         }
-        public double UngleOfLines(Line ln2)
+        public double AngleOfLines(Line ln2)
         {
             double scal = Scal_mult_of_vec(ln2.Vector);
             var x = scal / (Vec_Module * ln2.Vec_Module);
